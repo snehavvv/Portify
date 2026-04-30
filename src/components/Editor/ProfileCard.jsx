@@ -39,14 +39,38 @@ export default function ProfileCard() {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      // Use FileReader to convert image to base64 string for persistence
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => ({ ...prev, photoUrl: reader.result }));
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Max dimensions for profile photo
+        const MAX_SIZE = 500;
+        if (width > height && width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress to JPEG with 0.8 quality to keep payload small for Supabase
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        setProfile(prev => ({ ...prev, photoUrl: compressedBase64 }));
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
