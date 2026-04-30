@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #C8833A;
+  --color-accent-light: #E8A857;
+  --color-surface: #1A1410;
+  --font-sans: 'Inter', sans-serif;
+}
+
+:root {
+  --bg-base: #0D0A07;
+  --bg-surface: #1A1410;
+  --bg-surface-2: #221C15;
+  --border: #2E2418;
+  --accent-from: #C8833A;
+  --accent-to: #E8A857;
+  --text-primary: #F5F0E8;
+  --text-secondary: #9A8878;
+  --text-muted: #5A4E42;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(200, 131, 58, 0.3);
+  color: #F5F0E8;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1A1410;
+}
+::-webkit-scrollbar-thumb {
+  background: #2E2418;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C8833A;
+}
+
+/* Animations */
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes float {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.5); }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.3s ease-out forwards;
+}
+
+.animate-bar {
+  animation: growBar 0.4s ease-out forwards;
+  transform-origin: bottom;
+}
+
+.animate-float {
+  animation: float 2s ease-out infinite;
+}
