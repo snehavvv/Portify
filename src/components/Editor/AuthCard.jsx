@@ -35,7 +35,11 @@ export default function AuthCard() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+    // Reset form fields so a fresh login form appears
+    setEmail('');
+    setPassword('');
+    setError('');
   };
 
   return (

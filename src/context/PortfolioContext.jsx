@@ -1,10 +1,17 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 
 export const PortfolioContext = createContext(null);
 
+// Default empty states
+const DEFAULT_PROFILE = { name: '', role: '', bio: '', photoUrl: '' };
+const DEFAULT_SKILLS = [];
+const DEFAULT_PROJECTS = [];
+const DEFAULT_CONTACT = { email: '', github: '', linkedin: '' };
+
 export const PortfolioProvider = ({ children, initialData = null }) => {
   const [user, setUser] = useState(null);
+  const prevUserIdRef = useRef(null);
   
   // Load initial state from localStorage or props
   const getInitialState = (key, fallback) => {
@@ -17,19 +24,36 @@ export const PortfolioProvider = ({ children, initialData = null }) => {
     }
   };
 
-  const [profile, setProfile] = useState(() => getInitialState('profile', { name: '', role: '', bio: '', photoUrl: '' }));
-  const [skills, setSkills] = useState(() => getInitialState('skills', []));
-  const [projects, setProjects] = useState(() => getInitialState('projects', []));
-  const [contact, setContact] = useState(() => getInitialState('contact', { email: '', github: '', linkedin: '' }));
+  const [profile, setProfile] = useState(() => getInitialState('profile', DEFAULT_PROFILE));
+  const [skills, setSkills] = useState(() => getInitialState('skills', DEFAULT_SKILLS));
+  const [projects, setProjects] = useState(() => getInitialState('projects', DEFAULT_PROJECTS));
+  const [contact, setContact] = useState(() => getInitialState('contact', DEFAULT_CONTACT));
   const [templates, setTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState(() => getInitialState('templateId', null));
   const [publishedPortfolioId, setPublishedPortfolioId] = useState(null);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [lastPublishedSlug, setLastPublishedSlug] = useState('');
 
-  // Save to localStorage whenever data changes (only if we're not viewing a published public portfolio)
+  // Helper: clear all portfolio data from state and localStorage
+  const clearPortfolioData = () => {
+    setProfile({ ...DEFAULT_PROFILE });
+    setSkills([...DEFAULT_SKILLS]);
+    setProjects([...DEFAULT_PROJECTS]);
+    setContact({ ...DEFAULT_CONTACT });
+    setSelectedTemplateId(null);
+    setPublishedPortfolioId(null);
+    setLastPublishedSlug('');
+
+    localStorage.removeItem('portiffy_profile');
+    localStorage.removeItem('portiffy_skills');
+    localStorage.removeItem('portiffy_projects');
+    localStorage.removeItem('portiffy_contact');
+    localStorage.removeItem('portiffy_templateId');
+  };
+
+  // Save to localStorage whenever data changes (only when logged in and not viewing a published portfolio)
   useEffect(() => {
-    if (!initialData) {
+    if (!initialData && user) {
       localStorage.setItem('portiffy_profile', JSON.stringify(profile));
       localStorage.setItem('portiffy_skills', JSON.stringify(skills));
       localStorage.setItem('portiffy_projects', JSON.stringify(projects));
@@ -38,16 +62,31 @@ export const PortfolioProvider = ({ children, initialData = null }) => {
         localStorage.setItem('portiffy_templateId', JSON.stringify(selectedTemplateId));
       }
     }
-  }, [profile, skills, projects, contact, selectedTemplateId, initialData]);
+  }, [profile, skills, projects, contact, selectedTemplateId, initialData, user]);
 
-  // 1. Auth Listener
+  // 1. Auth Listener — clear data on sign-out, reset on user change
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser);
+      prevUserIdRef.current = sessionUser?.id ?? null;
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUser = session?.user ?? null;
+
+      if (event === 'SIGNED_OUT') {
+        // User signed out — wipe all stale data
+        clearPortfolioData();
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // If a *different* user signed in, reset to defaults first
+        if (newUser && newUser.id !== prevUserIdRef.current) {
+          clearPortfolioData();
+        }
+      }
+
+      setUser(newUser);
+      prevUserIdRef.current = newUser?.id ?? null;
     });
 
     return () => subscription.unsubscribe();
