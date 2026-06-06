@@ -70,6 +70,11 @@ export const PortfolioProvider = ({ children, initialData = null }) => {
       const sessionUser = session?.user ?? null;
       setUser(sessionUser);
       prevUserIdRef.current = sessionUser?.id ?? null;
+
+      // No active session on page load — wipe any stale cached data
+      if (!sessionUser) {
+        clearPortfolioData();
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
